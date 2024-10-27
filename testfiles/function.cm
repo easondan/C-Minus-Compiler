@@ -1,0 +1,5 @@
+int test1(int a, int b, bool l);
+
+void main(int a, int b) {
+    int a[1]; bool boolean[1];
+}

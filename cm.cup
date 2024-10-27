@@ -1,0 +1,483 @@
+
+   
+/* ----------------------Preliminary Declarations Section--------------------*/
+   
+import absyn.*;
+   
+/* Parser code to change the way the parser reports errors (include
+   line and column number of the error). */
+parser code {:
+    
+    public void report_error(String message, Object info, int eleft, int eright) {
+   
+        StringBuffer m = new StringBuffer("Error");
+
+        m.append(" in line "+ (eleft +1) + " column " + (eright+1));
+        m.append(" : " + message);
+   
+        System.err.println(m);
+    }
+   
+    /* Change the method report_fatal_error so when it reports a fatal
+       error it will display the line and column number of where the
+       fatal error occurred in the input as well as the reason for the
+       fatal error which is passed into the method in the object
+       'message' and then exit.*/
+    public void report_fatal_error(String message, Object info, int eleft, int eright) {
+      
+        report_error(message, info, eleft, eright);
+        System.exit(1);
+    }
+
+:};
+   
+/* ------------Declaration of Terminals and Non Terminals Section----------- */
+
+terminal BOOL, ELSE, IF, INT, RETURN, VOID, WHILE;
+terminal PLUS, MINUS, TIMES, FWDSLASH;
+terminal LT, LE, GT, GE, EQEQ, NE;
+terminal TILDE,OR,AND;
+terminal EQ,SEMI,COMMA,LB,RB,LSB,RSB,LCB,RCB;
+terminal String ID,NUM,TRUTH;
+
+non terminal NameType typeSpecifier;
+non terminal Declaration declaration, funDeclaration,funPrototype;
+non terminal VarDec varDeclaration,param;
+non terminal Exp selectionStmt,oBoolExpression,aBoolExpression,uBoolExpression;
+non terminal Exp expression,expressionStmt,iterationStmt,returnStmt,stmt,compoundStmt;
+non terminal Exp call,factor,signedFactor,term,additiveExpression,simpleExpression;
+non terminal Var var;
+non terminal DecList program,declarationList;
+non terminal VarDecList params,paramList,localDeclarations;
+non terminal ExpList stmtList,args,argList;
+non terminal Integer addOp,mulOp;
+non terminal Integer relop;
+
+
+
+precedence left IF, RETURN, WHILE, SEMI, LB, RB, LCB, ID, NUM, TRUTH,INT,BOOL,VOID;
+precedence left ELSE;
+precedence left PLUS, MINUS, OR; 
+precedence left TIMES, FWDSLASH, AND;
+precedence right EQ;
+precedence nonassoc LT, LE, GT, GE, EQEQ, NE;
+
+
+program           ::= declarationList:decList 
+                     {: RESULT = decList; :}
+                  | 
+                     {: RESULT = null;
+                     System.err.println("Invalid Program: File is possibly Empty");:}
+                  ;
+
+declarationList   ::= declarationList:decList declaration:dec
+                     {:  // Iterate to end of dec list and append new dec
+                        DecList dList = decList;
+                        while (dList.tail != null) {
+                           dList = dList.tail;
+                        }
+                        dList.tail = new DecList(dec, null);
+                        RESULT = decList;
+                     :}
+                  | declaration:dec
+                     {: RESULT = new DecList(dec, null); :}
+                  ; 
+
+declaration       ::= varDeclaration:varDec
+                     {: RESULT = varDec; :}
+                  | funDeclaration:funcDec
+                     {: RESULT = funcDec; :}
+                  | funPrototype: funPrototype
+                     {: RESULT = funPrototype; :}
+                  ;
+
+
+varDeclaration    ::= typeSpecifier:ts ID:name SEMI
+                     {: RESULT = new SimpleDec(tsleft, tsright, ts, name); :}
+
+                  |  typeSpecifier:ts ID:name LSB NUM:num RSB SEMI:s 
+                     {: RESULT = new ArrayDec(tsleft, tsright, ts, name, Integer.parseInt(num)); :}
+                  
+
+                  |  typeSpecifier:ts error:e SEMI
+                     {: parser.report_error("Invalid Variable Declaration Name ",e, eleft, eright);
+                        RESULT = new SimpleDec(tsleft, tsright, ts, "");
+                     :}
+
+
+                  |  typeSpecifier:ts error:e LSB NUM:num RSB SEMI:s 
+                     {: parser.report_error("Invalid Variable Name for Array",e, eleft, eright);
+                        RESULT = new ArrayDec(tsleft, tsright, ts, "", Integer.parseInt(num));
+                     :}
+
+                  | typeSpecifier:ts ID:name error:e NUM:num RSB SEMI:s 
+                     {: parser.report_error("Missing Left Square Bracket for Array ",e, eleft, eright);
+                        RESULT = new ArrayDec(tsleft, tsright, ts, name, Integer.parseInt(num));
+                     :}
+
+                  | typeSpecifier:ts ID:name LSB error:e RSB SEMI:s 
+                     {: parser.report_error("Invalid Size for Array ",e, eleft, eright);
+                        RESULT = new ArrayDec(tsleft, tsright, ts, name, 0);
+                     :}    
+                  | typeSpecifier:ts ID:name error:e  
+                     {: parser.report_error("Missing Semicolon  ",e, eleft, eright);
+                       RESULT = new SimpleDec(tsleft, tsright, ts, name);
+                     :}    
+                  ;    
+
+
+typeSpecifier     ::= BOOL:B 
+                     {: RESULT = new NameType(Bleft,Bright,NameType.BOOL); :}
+                  | INT:I 
+                     {:RESULT = new NameType(Ileft,Iright,NameType.INT); :}
+                  | VOID:V 
+                     {:RESULT = new NameType(Vleft,Vright,NameType.VOID); :}
+                  ;
+
+funDeclaration    ::= typeSpecifier:ts ID:name LB params:params RB compoundStmt:cmpStmt
+                     {: RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, cmpStmt); :}
+                  | error:e ID:name LB params:params RB compoundStmt:cmpStmt
+                     {: parser.report_error("Invalid Type Specifier for Function",e, eleft, eright);
+                        RESULT = new FuncDeclaration(eleft, eright, null, name, params, cmpStmt);;
+                     :}
+                  |  typeSpecifier:ts ID:name error:e params:params RB compoundStmt:cmpStmt
+                     {: parser.report_error("Missing Left Bracket for Parameter List", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, cmpStmt);;
+                     :}
+                  |  typeSpecifier:ts ID:name LB params:params error:e compoundStmt:cmpStmt
+                     {: parser.report_error("Missing Right Bracket for Parameter List", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, cmpStmt);;
+                     :}
+                  |  typeSpecifier:ts ID:name LB error:e RB compoundStmt:cmpStmt
+                     {: parser.report_error("Invalid Parameter for function", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, null, cmpStmt);;
+                     :}
+
+                  ;
+
+funPrototype      ::= typeSpecifier:ts ID:name LB:LB params:params RB:RB SEMI:SEMI 
+                     {: RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, new NilExp(paramsleft, paramsright)); :}
+                  | error:e ID:name LB:LB params:params RB:RB SEMI:SEMI
+                     {: parser.report_error("Invalid Type Specifier for Function",e, eleft, eright);
+                        RESULT = new FuncDeclaration(eleft, eright, null, name, params, new NilExp(paramsleft, paramsright)); ;
+                     :}
+                  | typeSpecifier:ts ID:name error:e params:params RB:RB SEMI:SEMI
+                     {: parser.report_error("Missing Left Bracket for Parameter List", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, new NilExp(paramsleft, paramsright));;
+                     :}
+                  | typeSpecifier:ts ID:name LB:LB params:params error:e SEMI:SEMI
+                     {: parser.report_error("Missing Right Bracket for Parameter List", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, params, new NilExp(paramsleft, paramsright));;
+                     :}
+                  | typeSpecifier:ts ID:name LB:LB error:e RB SEMI
+                     {: parser.report_error("Invalid Parameter for Function prototype", e, eleft, eright);
+                        RESULT = new FuncDeclaration(tsleft, tsright, ts, name, null, new NilExp(eleft, eright));;
+                     :}
+                  | typeSpecifier:ts ID:name error:e SEMI
+                     {: parser.report_error("Missing Brackets",e, eleft, eright);
+                        RESULT = new FuncDeclaration(eleft, eright,ts, name, null , new NilExp(tsleft, tsright)); ;
+                     :}
+                  ;
+
+params            ::= paramList:paramList 
+                     {: RESULT = paramList; :} 
+                  | VOID
+                     {: RESULT = null; :} 
+                  ;
+
+paramList         ::= paramList:pList COMMA param:param 
+                     {: 
+                        VarDecList vList = pList;
+                        while (vList.tail != null) {
+                           vList = vList.tail;
+                        }
+                        vList.tail = new VarDecList(param, null);
+                        RESULT = pList;
+                     :}
+                  | param:param
+                     {: RESULT = new VarDecList(param, null); :}
+                  ;
+
+param             ::= typeSpecifier:ts ID:name
+                     {: RESULT = new SimpleDec(tsleft, tsright, ts, name); :} 
+                  | typeSpecifier:ts ID:name LSB RSB 
+                     {: RESULT = new ArrayDec(tsleft, tsright, ts, name, 0); :}
+                  ;
+
+
+compoundStmt      ::= LCB:lcb localDeclarations:ld stmtList:sl RCB 
+                     {: RESULT = new CompoundExp(lcbleft,lcbright,ld,sl); :} 
+                  ;
+
+localDeclarations ::= localDeclarations:ld varDeclaration:varDec 
+                     {:
+                        VarDecList vList = ld;
+                        while (vList.tail != null) {
+                           vList = vList.tail;
+                        }
+                        vList.tail = new VarDecList(varDec, null);
+                        RESULT = ld;
+                     :}
+                  |
+                     {: RESULT = new VarDecList(null, null); :}
+                  ;
+
+stmtList          ::= stmtList:sList stmt:stmt 
+                     {: 
+                        ExpList eList = sList;
+                        while (eList.tail != null) {
+                           eList = eList.tail;
+                        }
+                        eList.tail = new ExpList(stmt, null);
+                        RESULT = sList;
+                     :}
+                  |
+                     {: RESULT = new ExpList(null, null); :}
+                  ;
+
+stmt              ::= expressionStmt:exp
+                     {: RESULT = exp; :}
+                  | compoundStmt:cmp 
+                     {: RESULT = cmp; :}
+                  | selectionStmt:select
+                     {: RESULT = select; :}
+                  | iterationStmt:iter 
+                     {: RESULT = iter; :}
+                  | returnStmt:rtn
+                     {: RESULT = rtn; :}
+                  ;
+
+expressionStmt    ::= expression:exp SEMI
+                     {: RESULT = exp; :}
+                  | SEMI:s
+                     {: RESULT = new NilExp(sleft, sright); :}
+                  ;
+
+selectionStmt     ::= IF:f LB expression:exp RB stmt:stmt 
+                     {: RESULT = new IfExp(fleft, fright, exp, stmt, new NilExp(stmtleft, stmtright)); :} 
+                  | IF:f LB expression:exp RB stmt:stmt ELSE stmt:estmt 
+                     {: RESULT = new IfExp(fleft, fright, exp, stmt, estmt); :}
+                  | IF:f error:e expression:exp RB stmt:stmt
+                    {:  
+                        parser.report_error("Missing Left Bracket", e, eleft, eright);
+                        RESULT = new IfExp(fleft, fright, exp, stmt, new NilExp(stmtleft, stmtright)); 
+                    :} 
+                  | IF:f LB error:e stmt:stmt
+                    {:  
+                        parser.report_error("Missing Condition", e, eleft, eright);
+                         RESULT = new IfExp(fleft, fright, new NilExp(eleft, eright), stmt, new NilExp(stmtleft, stmtright)); 
+                    :} 
+                  | IF:f  error:e stmt:stmt
+                    {:  
+                        parser.report_error("Missing Condition", e, eleft, eright);
+                         RESULT = new IfExp(fleft, fright, new NilExp(eleft, eright), stmt, new NilExp(stmtleft, stmtright)); 
+                    :} 
+                  | IF:f LB expression:exp error:e stmt:stmt
+                    {:  
+                        parser.report_error("Missing Right Bracket", e, eleft, eright);
+                        RESULT = new IfExp(fleft, fright, exp, stmt, new NilExp(stmtleft, stmtright)); 
+                    :} 
+                  | IF:f LB error:e RB stmt:stmt
+                  {: parser.report_error("Missing Condition", e, eleft, eright);
+                        RESULT = new IfExp(fleft, fright, new NilExp(eleft, eright), stmt, new NilExp(stmtleft, stmtright)); :}
+                  | IF:f error:e RB stmt:stmt
+                  {: parser.report_error("Missing Condition", e, eleft, eright);
+                        RESULT = new IfExp(fleft, fright, new NilExp(eleft, eright), stmt, new NilExp(stmtleft, stmtright)); :}
+                  | IF:f error:e expression:exp RB stmt:stmt ELSE stmt:estmt 
+                     {: RESULT = new IfExp(fleft, fright, exp, stmt, estmt); 
+                        parser.report_error("Missing Left Bracket", e, eleft, eright);
+                     :}
+                  | IF:f LB error:e RB stmt:stmt ELSE stmt:estmt 
+                     {: RESULT = new IfExp(fleft, fright,  new NilExp(eleft, eright), stmt, estmt); 
+                         parser.report_error("Missing condition", e, eleft, eright);
+                     :}
+                  ;
+
+iterationStmt     ::= WHILE:w LB expression:exp RB stmt:stmt 
+                      {: 
+                      RESULT = new WhileExp(expleft, expright, exp, stmt); 
+                      :}
+                     | WHILE:w error:e expression:exp RB stmt:stmt 
+                        {: RESULT = new WhileExp(wleft, wright, exp, stmt); 
+                           parser.report_error("Missing Left Bracket", e, eleft, eright);
+                        :}
+                     | WHILE:w LB error:e RB stmt:stmt 
+                        {: RESULT = new WhileExp(wleft, wright, new NilExp(eleft, eright), stmt); 
+                           parser.report_error("Missing Condition", e, eleft, eright);
+                        :}
+                     | WHILE:w LB expression:exp error:e stmt:stmt 
+                        {: RESULT = new WhileExp(wleft, wright, exp, stmt); 
+                           parser.report_error("Missing Right Bracket", e, eleft, eright);
+                        :}
+                     | WHILE:w LB error:e stmt:stmt
+                       {: RESULT = new WhileExp(wleft, wright,new NilExp(eleft, eright) , stmt); 
+                           parser.report_error("Missing Condition ", e, eleft, eright);
+                        :}
+                     | WHILE:w error:e RB stmt:stmt
+                       {: RESULT = new WhileExp(wleft, wright,new NilExp(eleft, eright) , stmt); 
+                           parser.report_error("Missing Left Bracket ", e, eleft, eright);
+                        :}
+                     | WHILE:w error:e stmt:stmt
+                       {: RESULT = new WhileExp(wleft, wright,new NilExp(eleft, eright) , stmt); 
+                           parser.report_error("Missing Condition  ", e, eleft, eright);
+                        :}
+                      ;
+
+returnStmt        ::= RETURN expression:exp SEMI 
+                     {: RESULT = new ReturnExp(expleft, expright, exp); :}
+                  | RETURN SEMI:s
+                     {: RESULT = new NilExp(sleft, sright); :}
+                  | RETURN error:e SEMI:s
+                       {: parser.report_error("Invalid return statment (invalid expression)", e, eleft, eright);
+                          RESULT = new ReturnExp(eleft, eright, new NilExp(eleft, eright));
+                       :}
+                     | RETURN error:e
+                       {: parser.report_error("Invalid return statment (missing semicolon)", e, eleft, eright);
+                          RESULT = new ReturnExp(eleft, eright, new NilExp(eleft, eright));
+                       :}
+                     
+                  ;
+
+
+expression        ::= var:var EQ expression:exp 
+                     {: RESULT = new AssignExp(varleft, varright, new VarExp(varleft, varright, var), exp); :}
+                  | oBoolExpression:orExp
+                     {: RESULT = orExp; :}
+                  ;
+
+var               ::= ID:ID 
+                     {: RESULT = new SimpleVar(IDleft, IDright, ID); :} 
+                  | ID:ID LSB error:e RSB
+                      {: RESULT = new IndexVar(IDleft, IDright, ID,  new NilExp(eleft, eright)); 
+                        parser.report_error("Invalid variable statement Array", e, eleft, eright);
+                      :}
+
+                  | ID:ID LSB expression:exp RSB 
+                     {: RESULT = new IndexVar(IDleft, IDright, ID, exp); :}
+                  ;
+
+oBoolExpression   ::= oBoolExpression:oExp OR aBoolExpression:aExp
+                     {: RESULT = new OpExp(oExpleft, oExpright, oExp, OpExp.OR, aExp); :}
+                  | aBoolExpression:aExp
+                     {: RESULT = aExp; :}
+                  ;
+
+aBoolExpression   ::= aBoolExpression:aExp AND uBoolExpression:uExp 
+                     {: RESULT = new OpExp(aExpleft, aExpright, aExp, OpExp.AND, uExp); :}
+                  | uBoolExpression:uExp
+                     {: RESULT = uExp; :}
+                  ;
+
+uBoolExpression   ::= TILDE uBoolExpression:uExp
+                     {: RESULT = new OpExp(uExpleft, uExpright, new NilExp(uExpleft, uExpright), OpExp.TILDE, uExp); :}
+                  | simpleExpression:simpExp
+                     {: RESULT = simpExp; :}
+                  ;
+
+// FIX MEEEEEEE
+// what is wrong with him? :(
+simpleExpression  ::= additiveExpression:exp1 relop:op additiveExpression:exp2
+                     {: RESULT = new OpExp(exp1left, exp1right, exp1, op, exp2); :}
+                  | additiveExpression:exp
+                     {: RESULT = exp; :}
+                  ;
+
+relop             ::= LE
+                     {: RESULT = OpExp.LE; :}
+                  | LT 
+                     {: RESULT = OpExp.LT; :}
+                  | GT 
+                     {: RESULT = OpExp.GT; :}
+                  | GE
+                     {: RESULT = OpExp.GE; :} 
+                  | EQEQ
+                     {: RESULT = OpExp.EQ; :} 
+                  | NE
+                     {: RESULT = OpExp.NE; :}
+                  ;
+
+additiveExpression ::= additiveExpression:exp addOp:op term:term 
+                     {: RESULT = new OpExp(expleft, expright, exp, op, term); :}
+                  | term:term
+                     {: RESULT = term; :}
+                  ;
+
+addOp             ::= PLUS
+                     {: RESULT = OpExp.PLUS; :}
+                  | MINUS
+                     {: RESULT = OpExp.MINUS; :}
+                  ;
+
+term              ::= term:term mulOp:mulop signedFactor:signedFactor
+                     {: RESULT = new OpExp(termleft, termright, term, mulop, signedFactor); :}
+                  | signedFactor:signedFactor
+                     {: RESULT = signedFactor; :}
+                    ;
+
+mulOp             ::= TIMES
+                     {: RESULT = OpExp.MUL; :}
+                  | FWDSLASH
+                     {: RESULT = OpExp.DIV; :}
+                  ;
+
+//  OpExp.UMINUS or OpExp.MINUS?
+signedFactor      ::= MINUS signedFactor:signedFactor
+                        {: RESULT = new OpExp(
+                        signedFactorleft,
+                        signedFactorright,
+                        new NilExp(signedFactorleft, signedFactorright),
+                        OpExp.UMINUS, signedFactor
+                        ); :}
+                    | factor:factor
+                        {: RESULT = factor; :}
+                    ;
+
+factor            ::= LB expression:expression RB
+                        {: RESULT = expression; :}
+
+                    | var:var
+                        {: RESULT = new VarExp(varleft, varright, var); :}
+                    | call:call
+                        {: RESULT = call; :}
+                    | NUM:num
+                        {: RESULT = new IntExp(numleft, numright, Integer.parseInt(num)); :}
+                    | TRUTH:truth
+                        {: RESULT = new BoolExp(truthleft, truthright, Boolean.parseBoolean(truth)); :}
+                    ;
+
+call              ::= ID:ID LB:LB args:args RB:RB
+                        {: RESULT = new CallExp(IDleft, IDright, ID, args); :}
+                     |
+                        ID:ID LB error:e RB:RB 
+                        {: 
+                           RESULT = new CallExp(IDleft, IDright, ID, null); 
+                            parser.report_error("Missing Arguments for function call", e, eleft, eright);
+                        :}
+                     |
+                        error:e LB args:args RB:RB 
+                        {: 
+                           RESULT = new CallExp(eleft,eright, "", null); 
+                            parser.report_error("Missing Arguments for function call", e, eleft, eright);
+                        :}
+
+                    ;
+
+args              ::= argList:argList
+                        {: RESULT = argList; :}
+                     |
+                        {: RESULT = null; :}
+                        ;
+
+
+argList           ::=  argList:argList COMMA expression:expression
+                        {:
+                           ExpList eList = argList;
+                           while (eList.tail != null) {
+                              eList = eList.tail;
+                           }
+                           eList.tail = new ExpList(expression, null);
+                           RESULT = argList;
+                        :}
+                    | expression:expression
+                        {: RESULT = new ExpList(expression, null); :}
+                    ;

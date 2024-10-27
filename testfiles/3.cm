@@ -1,0 +1,16 @@
+/*
+    Errors:
+    - The main functions does not take a void parameter
+    - Invalid array assignment
+    - Missing condition in the if statement
+*/
+
+void main() {
+
+    i [ ] = 10;
+
+    if (){
+
+    }
+
+}
