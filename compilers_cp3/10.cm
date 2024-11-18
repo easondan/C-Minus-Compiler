@@ -1,0 +1,33 @@
+/*
+    Errors:
+        1. Calling a function with wrong return type in array index
+        2. Foo has the wrong return type
+        2. Adding operands with incompatible types
+        3. Calling a function with incorrect number of arguments
+        4. Assignment with an incomptaible type
+        5. Empty if condition
+
+*/
+
+void foo() {
+    int a;
+    int b;
+    return 2;
+}
+
+int empty() {
+
+}
+
+int a () {
+    int a[5];
+
+    a[foo()] = 5;
+    a[0] = 1 + true;
+    foo(1, true, false);
+    a[1] = false;
+
+    if (jason) {
+
+    }
+}

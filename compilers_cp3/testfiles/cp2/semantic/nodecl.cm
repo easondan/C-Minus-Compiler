@@ -1,0 +1,10 @@
+/*
+    Errors:
+    - Using a value without declaration
+*/
+
+int x;
+
+x = z + 1;
+
+

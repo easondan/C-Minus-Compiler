@@ -1,0 +1,15 @@
+/*
+    Errors:
+    - Declaring a value twice in the SAME scope
+*/
+
+int y;
+
+void main() {
+    int x;
+
+    x = x + 1;
+}
+
+int y;
+

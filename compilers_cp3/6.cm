@@ -1,0 +1,14 @@
+/*
+    Type Check: Check operands of binary/unary operations
+        - Check that both operands equal to type of LHS
+
+    Type Errors:
+        - foo undeclared
+
+*/
+
+int fun(int fff) {
+    int x; int y;
+    x = x * 2 + 1;
+    y = x + foo();
+}

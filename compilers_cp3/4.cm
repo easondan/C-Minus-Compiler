@@ -1,0 +1,10 @@
+/*
+    Type Errors:
+    - assigning an INT value to BOOL array
+
+*/
+
+void main(void) {
+    bool a[2];
+    a[0] = 2; 
+}

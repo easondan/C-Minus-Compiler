@@ -1,0 +1,7 @@
+/* This file generates valid assembly code */
+
+void main(void){
+    int x;
+    x = 50 + 10;
+    output(x);
+}

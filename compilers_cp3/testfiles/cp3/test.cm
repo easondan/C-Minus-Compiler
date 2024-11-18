@@ -1,0 +1,11 @@
+int x;
+
+int test (void) {
+    int z; 
+    int b; 
+    int c;
+
+    x = x + 1;
+
+    return 0;
+}

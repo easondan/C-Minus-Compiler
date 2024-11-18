@@ -1,0 +1,14 @@
+/*
+    Purpose:
+    - Show key-value pairs in different scopes for different declarations
+
+    Errors:
+    - None
+
+*/
+
+int x;
+bool bbb[10];
+
+void foo(void);
+

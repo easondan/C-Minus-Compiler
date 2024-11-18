@@ -1,0 +1,16 @@
+/*
+    Type Checking: Operand types in assignment expression
+
+    Type Error: 
+        - Invalid operand return type in line 15 
+*/
+
+void foo() {
+    return 1;
+}
+
+void main() {
+    bool x;
+
+    x = true + foo();
+}

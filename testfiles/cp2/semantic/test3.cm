@@ -1,0 +1,19 @@
+/*
+    Type Checking:
+    1. Function call references a defined function in symbol table
+    2. Function call args match defined function parameter list
+*/
+
+int test(int z, int p) {
+
+    return z + p;
+}
+
+
+void foo(int x) {
+    int y;
+
+    y = x + 1;
+
+    test();
+}

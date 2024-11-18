@@ -1,0 +1,16 @@
+/* This file generates valid assembly code */
+
+int x;
+
+void main(void){
+    int y;
+    y = 10;
+    x = y + 5;
+
+    if (x > 10){
+        x = x + 1;
+    } else {
+        x = x - 1;
+    }
+
+}

@@ -1,0 +1,18 @@
+/*
+    Errors:
+        1. Calling a function with missing arguments
+        2. Calling a function with wrong types 
+*/
+
+int test(int z, int p) {
+    return z + p;
+}
+
+void foo(int x) {
+    int y;
+
+    y = 1 + 1;
+
+    test();
+    test(1, true);
+}

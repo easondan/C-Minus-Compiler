@@ -1,0 +1,21 @@
+/*
+    Errors: None
+*/
+
+void foo(void) {
+    int x;
+    int y;
+}
+
+int bar (int a, bool b) {
+    a = 5;
+    b = true;
+
+    foo();
+    return 1;
+}
+
+void main(void) {
+    int res;
+    res =  bar(4, false);
+}

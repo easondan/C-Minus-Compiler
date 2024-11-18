@@ -1,0 +1,58 @@
+/*
+    This file contains no Errors and shows different functionalities of the language
+*/
+
+int factorial(int n) {
+  int result;
+  if (n <= 1) {
+    result = 1;
+  } else {
+    result = n * factorial(n - 1);
+  }
+  return result;
+}
+
+bool isPrime(int number) {
+  int i;
+  if (number <= 1) {
+    return false;
+  }
+  for (i = 2; i < number; i = i + 1) {
+    if (number % i == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void main(void) {
+  int x;
+  int fac;
+  bool test;
+  int primes[10];
+  int i;
+
+  x = input();
+  fac = factorial(x);
+  test = isPrime(x);
+
+  primes[0] = 2;
+  primes[1] = 3;
+  primes[2] = 5;
+  primes[3] = 7;
+  primes[4] = 11;
+  primes[5] = 13;
+  primes[6] = 17;
+  primes[7] = 19;
+  primes[8] = 23;
+  primes[9] = 29;
+
+  output(fac);
+  output(test);
+
+  i = 0;
+  while (i < 10 && primes[i] < x) {
+    output(primes[i]);
+    i = i + 1;
+  }
+}

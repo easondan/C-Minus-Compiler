@@ -1,0 +1,10 @@
+/*
+    int x;
+    if(foo()) output(x, foo());
+*/
+void main(void) {
+    int x;
+    if ( x < 5 ) {
+        output(foo());
+    }
+}
